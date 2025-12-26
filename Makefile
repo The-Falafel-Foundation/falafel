@@ -2,14 +2,24 @@ CC = gcc
 AS = nasm
 LD = ld
 
-CFLAGS = -m64 -ffreestanding -O2 -Wall -Wextra -fno-stack-protector -mno-red-zone
-ASFLAGS = -f elf64
-LDFLAGS = -n -T linker.ld
+CFLAGS = -m32 -ffreestanding -O2 -Wall -Wextra \
+         -fno-stack-protector \
+         -MMD -MP
+ASFLAGS = -f elf32
+LDFLAGS = -m elf_i386 -n -T linker.ld
 
-SRCS = kernel/main.c
-OBJS = kernel/boot.o kernel/main.o
-KERNEL = falafel-x86_64.bin
+KERNEL = falafel-x86_32.bin
 ISO = falafel.iso
+
+C_SRCS := $(shell find kernel -name '*.c')
+C_OBJS := $(C_SRCS:.c=.o)
+
+ASM_SRCS := kernel/boot.s
+ASM_OBJS := $(ASM_SRCS:.s=.o)
+
+OBJS := $(ASM_OBJS) $(C_OBJS)
+
+DEPS := $(OBJS:.o=.d)
 
 all: $(ISO)
 
@@ -20,16 +30,20 @@ $(ISO): $(KERNEL)
 	grub-mkrescue -o $(ISO) isodir
 
 $(KERNEL): $(OBJS)
-	$(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^
 
-kernel/boot.o: kernel/boot.s
-	$(AS) $(ASFLAGS) $< -o $@
-
-kernel/main.o: kernel/main.c
+kernel/%.o: kernel/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+kernel/%.o: kernel/%.s
+	$(AS) $(ASFLAGS) $< -o $@
+
 clean:
-	rm -rf kernel/*.o $(KERNEL) $(ISO) isodir
+	rm -rf $(KERNEL) $(ISO) isodir
+	find kernel -name '*.o' -delete
+	find kernel -name '*.d' -delete
 
 run: $(ISO)
-	qemu-system-x86_64 -cdrom $(ISO)
+	qemu-system-i386 -cdrom $(ISO)
+
+-include $(DEPS)
