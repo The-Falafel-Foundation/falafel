@@ -14,15 +14,11 @@ LDFLAGS = -m elf_i386 -n -T linker.ld
 KERNEL = falafel-x86_32.bin
 ISO = falafel.iso
 
-# 1. Find all C files
 C_SRCS := $(shell find kernel -name '*.c')
 C_OBJS := $(C_SRCS:.c=.o)
 
-# 2. Specifically define the boot assembly
 BOOT_OBJ := kernel/boot.o
 
-# 3. Filter boot.o out of any automated lists to prevent double-linking
-# and ensure it is the VERY FIRST object in the list.
 OTHER_OBJS := $(filter-out $(BOOT_OBJ), $(C_OBJS))
 FINAL_OBJS := $(BOOT_OBJ) $(OTHER_OBJS)
 
@@ -38,7 +34,6 @@ $(ISO): $(KERNEL)
 	cp grub.cfg isodir/boot/grub/
 	grub-mkrescue -o $(ISO) isodir
 
-# CRITICAL: $(BOOT_OBJ) must be the first prerequisite
 $(KERNEL): $(FINAL_OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(FINAL_OBJS)
 
