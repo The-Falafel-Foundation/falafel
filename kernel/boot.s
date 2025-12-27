@@ -20,6 +20,9 @@ global _start
 _start:
     mov esp, stack_top
 
+    push ebx
+    push eax
+
     extern kernel_main
     call kernel_main
 .halt:
