@@ -2,6 +2,9 @@ CC = gcc
 AS = nasm
 LD = ld
 
+# -m32: Compile for 32-bit
+# -ffreestanding: No standard library
+# -fno-stack-protector: Required for kernels without a libs
 CFLAGS = -m32 -ffreestanding -O2 -Wall -Wextra \
          -fno-stack-protector \
          -MMD -MP
@@ -14,23 +17,25 @@ ISO = falafel.iso
 C_SRCS := $(shell find kernel -name '*.c')
 C_OBJS := $(C_SRCS:.c=.o)
 
-ASM_SRCS := kernel/boot.s
-ASM_OBJS := $(ASM_SRCS:.s=.o)
+BOOT_OBJ := kernel/boot.o
 
-OBJS := $(ASM_OBJS) $(C_OBJS)
+OTHER_OBJS := $(filter-out $(BOOT_OBJ), $(C_OBJS))
+FINAL_OBJS := $(BOOT_OBJ) $(OTHER_OBJS)
 
-DEPS := $(OBJS:.o=.d)
+DEPS := $(FINAL_OBJS:.o=.d)
+
+.PHONY: all clean run
 
 all: $(ISO)
 
 $(ISO): $(KERNEL)
-	mkdir -p isodir/boot/grub
+	@mkdir -p isodir/boot/grub
 	cp $(KERNEL) isodir/boot/
 	cp grub.cfg isodir/boot/grub/
 	grub-mkrescue -o $(ISO) isodir
 
-$(KERNEL): $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^
+$(KERNEL): $(FINAL_OBJS)
+	$(LD) $(LDFLAGS) -o $@ $(FINAL_OBJS)
 
 kernel/%.o: kernel/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
