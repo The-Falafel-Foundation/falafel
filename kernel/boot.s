@@ -18,17 +18,10 @@ section .text
 global _start
 
 _start:
-    ; 1. Initialize the stack pointer
     mov esp, stack_top
-
-    ; 2. Push arguments for kernel_main(magic, addr)
-    push ebx    ; Multiboot info structure pointer (addr)
-    push eax    ; Magic number
 
     extern kernel_main
     call kernel_main
-
-    ; Hang if kernel returns
 .halt:
     hlt
     jmp .halt
